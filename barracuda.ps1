@@ -34,8 +34,8 @@ $resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post -Headers $Headers
 $res = $resraw.Content | ConvertFrom-Json
 $token = $res.access_token
 
-$res
-$token
+$res | fl
+
 
 $Headers = @{'Authorization' = "Bearer $token"}
 
