@@ -38,7 +38,7 @@ function Get-BarracudaToken {
 # get the account ID 
 function Get-BarracudaAccountID {
     $uri = $CudaAPIbaseurl + 'beta/accounts/ess'
-    $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $Headers
+    $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $CommonHeaders
     $res = $ResRaw.Content | ConvertFrom-Json
     return $res.results[0].accountId
 }
