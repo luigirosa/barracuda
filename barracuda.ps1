@@ -52,7 +52,9 @@ $token = Get-BarracudaToken
 $CommonHeaders = @{'Authorization' = "Bearer $token"}
 $accountID = Get-BarracudaAccountID
 
+$accountID
 
+<#
 #
 # Domains 
 #
@@ -99,3 +101,4 @@ if ($DBGdomain) {
     } while ($loopflag)
 }
 
+#>
