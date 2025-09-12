@@ -21,20 +21,23 @@ $Connection.ConnectionString = "server='$SQLserver';database='$SQLdatabase';user
 $Connection.Open()
 
 # get the access token 
-$uri= $CudaAPItokenurl
-# cred
-$pair = "$($CudaAPIclient):$($CudaAPIsecret)"
-$encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-$basicAuthValue = "Basic $encodedCreds"
-$Headers = @{ Authorization = $basicAuthValue }
-$post = @{ grant_type = 'client_credentials';
-           scope = "forensics:account:read ess:account:read";
-         }
-$resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post -Headers $Headers
-$res = $resraw.Content | ConvertFrom-Json
-$token = $res.access_token
+function B-Get-Token {
+    $uri= $CudaAPItokenurl
+    $pair = "$($CudaAPIclient):$($CudaAPIsecret)"
+    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+    $basicAuthValue = "Basic $encodedCreds"
+    $Headers = @{ Authorization = $basicAuthValue }
+    $post = @{ grant_type = 'client_credentials';
+            scope = "forensics:account:read ess:account:read";
+            }
+    $resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post -Headers $Headers
+    $res = $resraw.Content | ConvertFrom-Json
+    return $res.access_token
+}
 
-$res | fl
+$a = B-Get-Token()
+
+$a
 
 
 $Headers = @{'Authorization' = "Bearer $token"}
