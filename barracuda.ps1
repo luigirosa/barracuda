@@ -28,7 +28,7 @@ $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.G
 $basicAuthValue = "Basic $encodedCreds"
 $Headers = @{ Authorization = $basicAuthValue }
 $post = @{ grant_type = 'client_credentials';
-           scope = "scope=forensics:account:read ess:account:read";
+           scope = "forensics:account:read ess:account:read";
          }
 $resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post -Headers $Headers
 $res = $resraw.Content | ConvertFrom-Json
