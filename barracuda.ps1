@@ -23,12 +23,14 @@ $Connection.Open()
 # get the access token 
 $uri= $CudaAPItokenurl
 # cred
-$secpasswd = ConvertTo-SecureString $CudaAPIsecret -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential($CudaAPIclient, $secpasswd)
+$pair = "$($CudaAPIclient):$($CudaAPIsecret)"
+$encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+$basicAuthValue = "Basic $encodedCreds"
+$Headers = @{ Authorization = $basicAuthValue }
 $post = @{ grant_type = 'client_credentials';
            scope = "scope=forensics:account:read ess:account:read";
          }
-$resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post -Credential $credential
+$resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post -Headers $Headers
 $res = $resraw.Content | ConvertFrom-Json
 $token = $res.access_token
 
