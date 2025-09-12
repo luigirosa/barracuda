@@ -67,8 +67,8 @@ if ($DBGdomain) {
             $res = $resRaw | ConvertFrom-Json
             $thispage = $res.pageNum
             $pagetot = $res.pagesTotal
-            $res | fl
-            $res = $ResRaw.results | ConvertFrom-Json
+            $ResRaw.results[0] | fl
+            $res = $ResRaw.results[0] | ConvertFrom-Json
             foreach ($rec in $res) {
                 $qry = "INSERT INTO $SQLtablenetscan
                 ([timestamp],[domainId],[domainName],[status],[type])
