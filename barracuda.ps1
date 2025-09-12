@@ -14,30 +14,36 @@ catch {
 	EXIT
 }
 
-
-<#
 Write-Host "Connecting to SQL"
 # writer connection (agents)
 $Connection = New-Object System.Data.SQLClient.SQLConnection
 $Connection.ConnectionString = "server='$SQLserver';database='$SQLdatabase';user id='$SQLu';password='$SQLp';"
 $Connection.Open()
 
+# get the access token 
+$uri= $CudaAPItokenurl
+# cred
+$secpasswd = ConvertTo-SecureString $CudaAPIsecret -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential($CudaAPIclient, $secpasswd)
+$post = @{ grant_type = 'client_credentials';
+           scope = "scope=forensics:account:read ess:account:read";
+         }
+$resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post -Credential $credential
+$res = $resraw.Content | ConvertFrom-Json
+$token = $res.access_token
+
+$res
+$token
+
+$Headers = @{'Authorization' = "Bearer $token"}
+
+
+<#
 
 # delete old records
 	Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtableuser" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
 	#enumerate tenants
 
-# get the access token 
-		$uri= 'https://login.microsoftonline.com/' + $tenant.t + '/oauth2/v2.0/token' 
-		$post = @{client_id = $tenant.a;
-	            scope = 'https://graph.microsoft.com/.default';
-	            client_secret= $tenant.p;
-	          	grant_type = 'client_credentials'
-				}
-		$resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post
-		$res = $resraw.Content | ConvertFrom-Json
-		$token = $res.access_token
-		$Headers = @{'Authorization' = "Bearer $token"}
 
 
 
