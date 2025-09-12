@@ -21,7 +21,7 @@ $Connection.ConnectionString = "server='$SQLserver';database='$SQLdatabase';user
 $Connection.Open()
 
 # get the access token 
-function B-Get-Token {
+function Get-BarracudaToken {
     $uri= $CudaAPItokenurl
     $pair = "$($CudaAPIclient):$($CudaAPIsecret)"
     $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
@@ -35,7 +35,7 @@ function B-Get-Token {
     return $res.access_token
 }
 
-$a = B-Get-Token()
+$a = Get-BarracudaToken
 
 $a
 
