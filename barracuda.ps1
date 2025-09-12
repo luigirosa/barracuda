@@ -43,7 +43,7 @@ Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtabledomain" -ServerInstance $SQLserver
 $token = Get-BarracudaToken
 $Headers = @{'Authorization' = "Bearer $token"}
 
-$uri = CudaAPIbaseurl + 'beta/accounts/ess'
+$uri = $CudaAPIbaseurl + 'beta/accounts/ess'
 $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $Headers
 $res = $ResRaw.Content | ConvertFrom-Json
 $res
