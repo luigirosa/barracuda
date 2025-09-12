@@ -12,19 +12,10 @@ $CudaAPItokenurl      = ''
 $CudaAPIclient        = ''
 $CudaAPIsecret        = ''
 
-$SQLtableagent        = ''
-$SQLtableNet          = ''
-$SQLtableapplication  = ''
-$SQLtablenetscan      = ''
-$SQLtableappriskdet   = ''
-$SQLtablerogue        = ''
-$SQLtablezsetup       = ''
+$SQLtabledomain       = ''
 
 
 # DBUG FLAGS
-$DBGnetdiscovery      = $true
-$DBGagent             = $true
-$DBGappriskdet        = $true
-$DBGrogue             = $true
+$DBGdomain            = $true
 
 
