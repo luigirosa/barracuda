@@ -108,8 +108,8 @@ if ($DBGdomain) {
 if ($DBGstats) {
     write-host -NoNewline "Email stats: "
     # delete old records
-    write-host -NoNewline "cleaning old data "
-    Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtablestats" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
+    #write-host -NoNewline "cleaning old data "
+    #Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtablestats" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
     #enumerate domains
 	$dtable = Invoke-Sqlcmd -Query "SELECT * FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
 	foreach ($domrecord in $dtable) {
