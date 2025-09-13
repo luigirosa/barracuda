@@ -56,12 +56,16 @@ $accountID = Get-BarracudaAccountID
 # Domains 
 #
 if ($DBGdomain) {
+    write-host -NoNewline "Domains: "
+    # delete old records
+    write-host -NoNewline "cleaning old data "
+    Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
     $loopflag = $true
     $uriparam = '?size=50' 
     $headers = $CommonHeaders
     do {
         $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains$uriparam"
-        Write-Host "Invoke-WebRequest -Uri $uri  -Headers $headers"
+        Write-Host -NoNewline "#"
         $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $headers
         if ('200' -eq $ResRaw.StatusCode) {
             $res = $resRaw | ConvertFrom-Json
@@ -81,6 +85,7 @@ if ($DBGdomain) {
                 $command.Parameters.Add("@type",       $(If ([string]::IsNullOrEmpty($rec.domainName) ) {''} Else {$rec.type} ))        | Out-Null
                 $Command.ExecuteNonQuery() | Out-Null
                 $command.Parameters.Clear()
+                Write-Host -NoNewline "."
             }
 
             # more pages to load?
@@ -95,4 +100,5 @@ if ($DBGdomain) {
             $ResRaw.StatusDescription
         }
     } while ($loopflag)
+    Write-Host " "
 }
