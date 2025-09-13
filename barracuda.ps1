@@ -114,7 +114,7 @@ if ($DBGstats) {
 	$dtable = Invoke-Sqlcmd -Query "SELECT domainName FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
 	foreach ($domainName in $dtable) {
         write-host -NoNewline $domainid
-        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=5"
+        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics"
         Write-Host -NoNewline "# "
         $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $CommonHeaders
         if ('200' -eq $ResRaw.StatusCode) {
