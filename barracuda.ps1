@@ -123,7 +123,7 @@ if ($DBGstats) {
             $res = $resRaw | ConvertFrom-Json
             # c'e' un girone dell'Inferno dedicato a quelli che mettono i dati nei tag JSON
             # inbound
-            $ direction = 'inbound'
+            $direction = 'inbound'
             Write-Host -NoNewline "inbound "
             foreach ($property in $res.inbound.PSObject.Properties) { 
                 $type = $property.Name
