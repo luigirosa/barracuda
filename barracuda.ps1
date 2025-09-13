@@ -111,9 +111,10 @@ if ($DBGstats) {
     write-host -NoNewline "cleaning old data "
     Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtablestats" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
     #enumerate domains
-	$dtable = Invoke-Sqlcmd -Query "SELECT domainName FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
-	foreach ($domainName in $dtable) {
-        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics"
+	$dtable = Invoke-Sqlcmd -Query "SELECT * FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
+	foreach ($domrecord in $dtable) {
+        $domainName = $domrecord.domainName
+        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=3"
         Write-Host -NoNewline "# "
         $uri
         $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $CommonHeaders
