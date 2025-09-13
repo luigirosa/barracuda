@@ -2,6 +2,9 @@
 # Barracuda <lrosa@akdmc.com>
 # Main file
 #
+# https://campus.barracuda.com/doc/167976859/
+# https://campus.barracuda.com/product/emailgatewaydefense/doc/167976859/api-overview
+#
 
 $ScriptVersion = "1.00"
 
@@ -42,11 +45,6 @@ function Get-BarracudaAccountID {
     $res = $ResRaw.Content | ConvertFrom-Json
     return $res.results[0].accountId
 }
-
-
-# delete old records
-write-host "Cleaning old data"
-Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
 
 $token = Get-BarracudaToken
 $CommonHeaders = @{'Authorization' = "Bearer $token"}
@@ -100,5 +98,56 @@ if ($DBGdomain) {
             $ResRaw.StatusDescription
         }
     } while ($loopflag)
-    Write-Host " "
+    Write-Host "done"
+}
+
+
+#
+# Statistics 
+#
+if ($DBGstats) {
+    write-host -NoNewline "Email stats: "
+    # delete old records
+    write-host -NoNewline "cleaning old data "
+    Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtablestats" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
+    #enumerate domains
+	$dtable = Invoke-Sqlcmd -Query "SELECT domainName FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
+	foreach ($domainName in $dtable) {
+        write-host -NoNewline $domainid
+        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=5"
+        Write-Host -NoNewline "# "
+        $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $CommonHeaders
+        if ('200' -eq $ResRaw.StatusCode) {
+            $res = $resRaw | ConvertFrom-Json
+            # c'e' un girone dell'Inferno dedicato a quelli che mettono i dati nei tag JSON
+            # inbound
+            $ direction = 'inbound'
+            Write-Host -NoNewline "inbound "
+            foreach ($property in $res.inbound.PSObject.Properties) { 
+                $type = $property.Name
+                Write-Host -NoNewline "$type"
+                foreach ($prop in $res.inbound.$type.PSObject.Properties) { 
+                    # che cazzo di bordello per un JSON scritto male
+                    $datetime = $prop.Name
+                    $count = $prop.value
+                    Write-Host -NoNewline "."
+                    $qry = "INSERT INTO $SQLtablestats
+                    ([timestamp],[domainName],[count],[datetime],[type],[direction])
+                    VALUES
+                    (CURRENT_TIMESTAMP,@domainName,@count,@datetime,@type,@direction)"
+                    $Command = New-Object System.Data.SQLClient.SQLCommand
+                    $Command.Connection = $Connection
+                    $Command.CommandText = $qry
+                    $command.Parameters.Add("@domainName", $domainName) | Out-Null
+                    $command.Parameters.Add("@count",      [int]$count) | Out-Null
+                    $command.Parameters.Add("@datetime",   $datetime) | Out-Null
+                    $command.Parameters.Add("@type",       $type) | Out-Null
+                    $command.Parameters.Add("@direction",  $direction) | Out-Null
+                    $Command.ExecuteNonQuery() | Out-Null
+                    $command.Parameters.Clear()
+                }
+            }
+        }
+    } 
+    Write-Host "done"
 }

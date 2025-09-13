@@ -13,9 +13,11 @@ $CudaAPIclient        = ''
 $CudaAPIsecret        = ''
 
 $SQLtabledomain       = ''
+$SQLtablestats        = ''
 
 
 # DBUG FLAGS
 $DBGdomain            = $true
+$DBGstats             = $true
 
 
