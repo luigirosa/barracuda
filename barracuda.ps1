@@ -113,10 +113,11 @@ if ($DBGstats) {
     #enumerate domains
 	$dtable = Invoke-Sqlcmd -Query "SELECT domainName FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
 	foreach ($domainName in $dtable) {
-        write-host -NoNewline $domainid
         $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics"
         Write-Host -NoNewline "# "
+        $uri
         $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $CommonHeaders
+        write-host -NoNewline $domainName
         if ('200' -eq $ResRaw.StatusCode) {
             $res = $resRaw | ConvertFrom-Json
             # c'e' un girone dell'Inferno dedicato a quelli che mettono i dati nei tag JSON
