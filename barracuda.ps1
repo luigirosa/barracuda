@@ -116,7 +116,6 @@ if ($DBGstats) {
         $domainName = $domrecord.domainName
         $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=3"
         Write-Host -NoNewline "# "
-        $uri
         $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $CommonHeaders
         write-host -NoNewline $domainName
         if ('200' -eq $ResRaw.StatusCode) {
@@ -129,6 +128,33 @@ if ($DBGstats) {
                 $type = $property.Name
                 Write-Host -NoNewline "$type"
                 foreach ($prop in $res.inbound.$type.PSObject.Properties) { 
+                    # che cazzo di bordello per un JSON scritto male
+                    $datetime = $prop.Name
+                    $count = $prop.value
+                    Write-Host -NoNewline "."
+                    $qry = "INSERT INTO $SQLtablestats
+                    ([timestamp],[domainName],[count],[datetime],[type],[direction])
+                    VALUES
+                    (CURRENT_TIMESTAMP,@domainName,@count,@datetime,@type,@direction)"
+                    $Command = New-Object System.Data.SQLClient.SQLCommand
+                    $Command.Connection = $Connection
+                    $Command.CommandText = $qry
+                    $command.Parameters.Add("@domainName", $domainName) | Out-Null
+                    $command.Parameters.Add("@count",      [int]$count) | Out-Null
+                    $command.Parameters.Add("@datetime",   $datetime) | Out-Null
+                    $command.Parameters.Add("@type",       $type) | Out-Null
+                    $command.Parameters.Add("@direction",  $direction) | Out-Null
+                    $Command.ExecuteNonQuery() | Out-Null
+                    $command.Parameters.Clear()
+                }
+            }
+            # outbound
+            $direction = 'outbound'
+            Write-Host -NoNewline "outbound "
+            foreach ($property in $res.outbound.PSObject.Properties) { 
+                $type = $property.Name
+                Write-Host -NoNewline "$type"
+                foreach ($prop in $res.outbound.$type.PSObject.Properties) { 
                     # che cazzo di bordello per un JSON scritto male
                     $datetime = $prop.Name
                     $count = $prop.value
