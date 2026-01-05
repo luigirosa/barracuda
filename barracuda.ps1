@@ -6,7 +6,7 @@
 # https://campus.barracuda.com/product/emailgatewaydefense/doc/167976859/api-overview
 #
 
-$ScriptVersion = "1.00"
+$ScriptVersion = "1.10"
 
 Write-Host "Reading configuration." 
 try {
@@ -33,7 +33,7 @@ function Get-BarracudaToken {
     $post = @{ grant_type = 'client_credentials';
             scope = "forensics:account:read ess:account:read";
             }
-    $resraw = Invoke-WebRequest -Uri $uri -Method POST -Body $post -Headers $Headers
+    $resraw = Invoke-WebRequest -UseBasicParsing -Uri $uri -Method POST -Body $post -Headers $Headers
     $res = $resraw.Content | ConvertFrom-Json
     return $res.access_token
 }
@@ -41,7 +41,7 @@ function Get-BarracudaToken {
 # get the account ID 
 function Get-BarracudaAccountID {
     $uri = $CudaAPIbaseurl + 'beta/accounts/ess'
-    $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $CommonHeaders
+    $ResRaw = Invoke-WebRequest -UseBasicParsing -Uri $uri  -Headers $CommonHeaders
     $res = $ResRaw.Content | ConvertFrom-Json
     return $res.results[0].accountId
 }
@@ -64,7 +64,7 @@ if ($DBGdomain) {
     do {
         $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains$uriparam"
         Write-Host -NoNewline "#"
-        $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $headers
+        $ResRaw = Invoke-WebRequest -UseBasicParsing -Uri $uri  -Headers $headers
         if ('200' -eq $ResRaw.StatusCode) {
             $res = $resRaw | ConvertFrom-Json
             $thispage = $res.pageNum
@@ -116,7 +116,7 @@ if ($DBGstats) {
         $domainName = $domrecord.domainName
         $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=30"
         Write-Host -NoNewline "# "
-        $ResRaw = Invoke-WebRequest -Uri $uri  -Headers $CommonHeaders
+        $ResRaw = Invoke-WebRequest -UseBasicParsing -Uri $uri  -Headers $CommonHeaders
         write-host -NoNewline $domainName
         if ('200' -eq $ResRaw.StatusCode) {
             $res = $resRaw | ConvertFrom-Json
