@@ -6,7 +6,7 @@
 # https://campus.barracuda.com/product/emailgatewaydefense/doc/167976859/api-overview
 #
 
-$ScriptVersion = "1.10"
+$ScriptVersion = "1.11"
 
 Write-Host "Reading configuration." 
 try {
@@ -80,7 +80,7 @@ if ($DBGdomain) {
                 $command.Parameters.Add("@domainId",   $(If ([string]::IsNullOrEmpty($rec.domainId) ) {''} Else {[int]$rec.domainId} )) | Out-Null
                 $command.Parameters.Add("@domainName", $(If ([string]::IsNullOrEmpty($rec.domainName) ) {''} Else {$rec.domainName} ))  | Out-Null
                 $command.Parameters.Add("@status",     $(If ([string]::IsNullOrEmpty($rec.status) ) {''} Else {$rec.status} ))          | Out-Null
-                $command.Parameters.Add("@type",       $(If ([string]::IsNullOrEmpty($rec.domainName) ) {''} Else {$rec.type} ))        | Out-Null
+                $command.Parameters.Add("@type",       $(If ([string]::IsNullOrEmpty($rec.type) ) {''} Else {$rec.type} ))              | Out-Null
                 $Command.ExecuteNonQuery() | Out-Null
                 $command.Parameters.Clear()
                 Write-Host -NoNewline "."
