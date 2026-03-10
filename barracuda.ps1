@@ -6,176 +6,212 @@
 # https://campus.barracuda.com/product/emailgatewaydefense/doc/167976859/api-overview
 #
 
-$ScriptVersion = "1.11"
+$ScriptVersion = "1.20"
 
-Write-Host "Reading configuration." 
+
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Host "This script requires PowerShell version 7"
+    EXIT
+}
+
+Write-Host "Reading configuration."
 try {
-    . (".\barracudaconfig.ps1")
-}
-catch {
-    Write-Host "Error reading setup file." 
-	EXIT
+    . "$PSScriptRoot\barracudaconfig.ps1" 
+} catch {
+    Write-Host "Error reading config file."
+    exit
 }
 
-Write-Host "Connecting to SQL"
+# load Microsoft.Data.SqlClient if available
+try {
+    Add-Type -AssemblyName "Microsoft.Data.SqlClient" -ErrorAction Stop
+    $sqlConnectionType = "Microsoft.Data.SqlClient.SqlConnection"
+    $sqlCommandType    = "Microsoft.Data.SqlClient.SqlCommand"
+} catch {
+    Write-Warning "Microsoft.Data.SqlClient not found. Falling back to System.Data.SqlClient."
+    $sqlConnectionType = "System.Data.SqlClient.SqlConnection"
+    $sqlCommandType    = "System.Data.SqlClient.SqlCommand"
+}
+
 # writer connection (agents)
-$Connection = New-Object System.Data.SQLClient.SQLConnection
-$Connection.ConnectionString = "server='$SQLserver';database='$SQLdatabase';user id='$SQLu';password='$SQLp';"
+$connectionString = "Server=$SQLserver;Database=$SQLdatabase;User ID=$SQLu;Password=$SQLp;TrustServerCertificate=True;"
+$Connection = New-Object $sqlConnectionType $connectionString
 $Connection.Open()
 
-# get the access token 
+# Barracuda Access token
 function Get-BarracudaToken {
-    $uri= $CudaAPItokenurl
+    $uri = $CudaAPItokenurl
     $pair = "$($CudaAPIclient):$($CudaAPIsecret)"
-    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-    $basicAuthValue = "Basic $encodedCreds"
-    $Headers = @{ Authorization = $basicAuthValue }
-    $post = @{ grant_type = 'client_credentials';
-            scope = "forensics:account:read ess:account:read";
-            }
-    $resraw = Invoke-WebRequest -UseBasicParsing -Uri $uri -Method POST -Body $post -Headers $Headers
-    $res = $resraw.Content | ConvertFrom-Json
+    $encodedCreds = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
+    $headers = @{
+        Authorization = "Basic $encodedCreds"
+    }
+    $body = @{
+        grant_type = "client_credentials"
+        scope      = "forensics:account:read ess:account:read"
+    }
+    $res = Invoke-RestMethod -Uri $uri -Method Post -Body $body -Headers $headers
     return $res.access_token
 }
 
-# get the account ID 
+# Barracuda account ID 
 function Get-BarracudaAccountID {
-    $uri = $CudaAPIbaseurl + 'beta/accounts/ess'
-    $ResRaw = Invoke-WebRequest -UseBasicParsing -Uri $uri  -Headers $CommonHeaders
-    $res = $ResRaw.Content | ConvertFrom-Json
+    param(
+        [Parameter(Mandatory)]
+        [hashtable]$Headers
+    )
+    $uri = "$CudaAPIbaseurl`beta/accounts/ess"
+    $res = Invoke-RestMethod -Uri $uri -Headers $Headers -Method Get
     return $res.results[0].accountId
 }
 
 $token = Get-BarracudaToken
-$CommonHeaders = @{'Authorization' = "Bearer $token"}
-$accountID = Get-BarracudaAccountID
+$CommonHeaders = @{
+    Authorization = "Bearer $token"
+}
+$accountID = Get-BarracudaAccountID -Headers $CommonHeaders
+
 
 #
-# Domains 
+# Domains
 #
 if ($DBGdomain) {
-    write-host -NoNewline "Domains: "
+    Write-Host -NoNewline "Domains: "
     # delete old records
-    write-host -NoNewline "cleaning old data "
-    Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
+    Write-Host -NoNewline "cleanup "
+    Invoke-Sqlcmd `
+        -Query "TRUNCATE TABLE $SQLtabledomain" `
+        -ServerInstance $SQLserver `
+        -Database $SQLdatabase `
+        -Username $SQLu `
+        -Password $SQLp `
+        -TrustServerCertificate
     $loopflag = $true
-    $uriparam = '?size=50' 
-    $headers = $CommonHeaders
+    $uriparam = "?size=50"
     do {
-        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains$uriparam"
-        Write-Host -NoNewline "#"
-        $ResRaw = Invoke-WebRequest -UseBasicParsing -Uri $uri  -Headers $headers
-        if ('200' -eq $ResRaw.StatusCode) {
-            $res = $resRaw | ConvertFrom-Json
-            $thispage = $res.pageNum
-            $pagetot = $res.pagesTotal
+        $uri = "$CudaAPIbaseurl`beta/accounts/$accountID/ess/domains$uriparam"
+        Write-Host -NoNewline " #"
+        try {
+            $res = Invoke-RestMethod -Uri $uri -Headers $CommonHeaders -Method Get
+            $thispage = [int]$res.pageNum
+            $pagetot  = [int]$res.pagesTotal
             foreach ($rec in $res.results) {
                 $qry = "INSERT INTO $SQLtabledomain
-                ([timestamp],[domainId],[domainName],[status],[type])
-                VALUES
-                (CURRENT_TIMESTAMP,@domainId,@domainName,@status,@type)"
-                $Command = New-Object System.Data.SQLClient.SQLCommand
+                        ([timestamp],[domainId],[domainName],[status],[type])
+                        VALUES 
+                        (CURRENT_TIMESTAMP,@domainId,@domainName,@status,@type)"
+                $Command = New-Object $sqlCommandType
                 $Command.Connection = $Connection
                 $Command.CommandText = $qry
-                $command.Parameters.Add("@domainId",   $(If ([string]::IsNullOrEmpty($rec.domainId) ) {''} Else {[int]$rec.domainId} )) | Out-Null
-                $command.Parameters.Add("@domainName", $(If ([string]::IsNullOrEmpty($rec.domainName) ) {''} Else {$rec.domainName} ))  | Out-Null
-                $command.Parameters.Add("@status",     $(If ([string]::IsNullOrEmpty($rec.status) ) {''} Else {$rec.status} ))          | Out-Null
-                $command.Parameters.Add("@type",       $(If ([string]::IsNullOrEmpty($rec.type) ) {''} Else {$rec.type} ))              | Out-Null
-                $Command.ExecuteNonQuery() | Out-Null
-                $command.Parameters.Clear()
-                Write-Host -NoNewline "."
+                [void]$Command.Parameters.AddWithValue("@domainId",   $(if ([string]::IsNullOrWhiteSpace($rec.domainId))   { [DBNull]::Value } else { [int]$rec.domainId }))
+                [void]$Command.Parameters.AddWithValue("@domainName", $(if ([string]::IsNullOrWhiteSpace($rec.domainName)) { [DBNull]::Value } else { [string]$rec.domainName }))
+                [void]$Command.Parameters.AddWithValue("@status",     $(if ([string]::IsNullOrWhiteSpace($rec.status))     { [DBNull]::Value } else { [string]$rec.status }))
+                [void]$Command.Parameters.AddWithValue("@type",       $(if ([string]::IsNullOrWhiteSpace($rec.type))       { [DBNull]::Value } else { [string]$rec.type }))
+                [void]$Command.ExecuteNonQuery()
+                $Command.Dispose()
+                Write-Host -NoNewline "+"
             }
-
-            # more pages to load?
             $thispage++
-            If ($thispage -eq $pagetot) {
+            if ($thispage -ge $pagetot) {
                 $loopflag = $false
-            } else {
+            }
+            else {
                 $uriparam = "?size=50&page=$thispage"
             }
-        } else {
-            write-host "Error getting domains"
-            $ResRaw.StatusDescription
+        } catch {
+            Write-Host "Error getting domains"
+            Write-Host $_.Exception.Message
+            $loopflag = $false
         }
-    } while ($loopflag)
-    Write-Host "done"
+    }
+    while ($loopflag)
+
+    Write-Host " done."
 }
 
 
 #
-# Statistics 
+# Statistics
 #
 if ($DBGstats) {
-    write-host -NoNewline "Email stats: "
-    # delete old records
-    #write-host -NoNewline "cleaning old data "
-    #Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtablestats" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
-    #enumerate domains
-	$dtable = Invoke-Sqlcmd -Query "SELECT * FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
-	foreach ($domrecord in $dtable) {
+    Write-Host -NoNewline "Email stats: "
+    # enumerate domains
+    $dtable = Invoke-Sqlcmd `
+        -Query "SELECT * FROM $SQLtabledomain" `
+        -ServerInstance $SQLserver `
+        -Database $SQLdatabase `
+        -Username $SQLu `
+        -Password $SQLp `
+        -TrustServerCertificate
+    foreach ($domrecord in $dtable) {
         $domainName = $domrecord.domainName
-        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=30"
-        Write-Host -NoNewline "# "
-        $ResRaw = Invoke-WebRequest -UseBasicParsing -Uri $uri  -Headers $CommonHeaders
-        write-host -NoNewline $domainName
-        if ('200' -eq $ResRaw.StatusCode) {
-            $res = $resRaw | ConvertFrom-Json
-            # c'e' un girone dell'Inferno dedicato a quelli che mettono i dati nei tag JSON
+        $uri = "$CudaAPIbaseurl`beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=30"
+        Write-Host -NoNewline " # "
+        try {
+            $res = Invoke-RestMethod -Uri $uri -Headers $CommonHeaders -Method Get
+            Write-Host -NoNewline $domainName
             # inbound
-            $direction = 'inbound'
-            Write-Host -NoNewline "inbound "
-            foreach ($property in $res.inbound.PSObject.Properties) { 
+            $direction = "inbound"
+            Write-Host -NoNewline " inbound "
+            foreach ($property in $res.inbound.PSObject.Properties) {
                 $type = $property.Name
                 Write-Host -NoNewline "$type"
-                foreach ($prop in $res.inbound.$type.PSObject.Properties) { 
-                    # che cazzo di bordello per un JSON scritto male
+                foreach ($prop in $res.inbound.$type.PSObject.Properties) {
                     $datetime = $prop.Name
-                    $count = $prop.value
-                    Write-Host -NoNewline "."
+                    $count = [int]$prop.Value
                     $qry = "INSERT INTO $SQLtablestats
-                    ([timestamp],[domainName],[count],[datetime],[type],[direction])
-                    VALUES
-                    (CURRENT_TIMESTAMP,@domainName,@count,@datetime,@type,@direction)"
-                    $Command = New-Object System.Data.SQLClient.SQLCommand
+                            ([timestamp],[domainName],[count],[datetime],[type],[direction])
+                            VALUES
+                            (CURRENT_TIMESTAMP,@domainName,@count,@datetime,@type,@direction)"
+                    $Command = New-Object $sqlCommandType
                     $Command.Connection = $Connection
                     $Command.CommandText = $qry
-                    $command.Parameters.Add("@domainName", $domainName) | Out-Null
-                    $command.Parameters.Add("@count",      [int]$count) | Out-Null
-                    $command.Parameters.Add("@datetime",   $datetime) | Out-Null
-                    $command.Parameters.Add("@type",       $type) | Out-Null
-                    $command.Parameters.Add("@direction",  $direction) | Out-Null
-                    $Command.ExecuteNonQuery() | Out-Null
-                    $command.Parameters.Clear()
+                    [void]$Command.Parameters.AddWithValue("@domainName", [string]$domainName)
+                    [void]$Command.Parameters.AddWithValue("@count",      $count)
+                    [void]$Command.Parameters.AddWithValue("@datetime",   [string]$datetime)
+                    [void]$Command.Parameters.AddWithValue("@type",       [string]$type)
+                    [void]$Command.Parameters.AddWithValue("@direction",  [string]$direction)
+                    [void]$Command.ExecuteNonQuery()
+                    $Command.Dispose()
+                    Write-Host -NoNewline "+"
                 }
             }
             # outbound
-            $direction = 'outbound'
-            Write-Host -NoNewline "outbound "
-            foreach ($property in $res.outbound.PSObject.Properties) { 
+            $direction = "outbound"
+            Write-Host -NoNewline " outbound "
+            foreach ($property in $res.outbound.PSObject.Properties) {
                 $type = $property.Name
                 Write-Host -NoNewline "$type"
-                foreach ($prop in $res.outbound.$type.PSObject.Properties) { 
-                    # che cazzo di bordello per un JSON scritto male
+                foreach ($prop in $res.outbound.$type.PSObject.Properties) {
                     $datetime = $prop.Name
-                    $count = $prop.value
-                    Write-Host -NoNewline "."
+                    $count = [int]$prop.Value
                     $qry = "INSERT INTO $SQLtablestats
-                    ([timestamp],[domainName],[count],[datetime],[type],[direction])
-                    VALUES
-                    (CURRENT_TIMESTAMP,@domainName,@count,@datetime,@type,@direction)"
-                    $Command = New-Object System.Data.SQLClient.SQLCommand
+                            ([timestamp],[domainName],[count],[datetime],[type],[direction])
+                            VALUES
+                            (CURRENT_TIMESTAMP,@domainName,@count,@datetime,@type,@direction)"
+                    $Command = New-Object $sqlCommandType
                     $Command.Connection = $Connection
                     $Command.CommandText = $qry
-                    $command.Parameters.Add("@domainName", $domainName) | Out-Null
-                    $command.Parameters.Add("@count",      [int]$count) | Out-Null
-                    $command.Parameters.Add("@datetime",   $datetime) | Out-Null
-                    $command.Parameters.Add("@type",       $type) | Out-Null
-                    $command.Parameters.Add("@direction",  $direction) | Out-Null
-                    $Command.ExecuteNonQuery() | Out-Null
-                    $command.Parameters.Clear()
+                    [void]$Command.Parameters.AddWithValue("@domainName", [string]$domainName)
+                    [void]$Command.Parameters.AddWithValue("@count",      $count)
+                    [void]$Command.Parameters.AddWithValue("@datetime",   [string]$datetime)
+                    [void]$Command.Parameters.AddWithValue("@type",       [string]$type)
+                    [void]$Command.Parameters.AddWithValue("@direction",  [string]$direction)
+                    [void]$Command.ExecuteNonQuery()
+                    $Command.Dispose()
+                    Write-Host -NoNewline "+"
                 }
             }
+        } catch {
+            Write-Host "Error processing $domainName"
+            Write-Host $_.Exception.Message
         }
-    } 
-    Write-Host "done"
+    }
+    Write-Host " done."
 }
+
+# Clean up
+if ($Connection.State -eq 'Open') {
+    $Connection.Close()
+}
+$Connection.Dispose()
