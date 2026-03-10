@@ -60,7 +60,7 @@ function Get-BarracudaAccountID {
         [Parameter(Mandatory)]
         [hashtable]$Headers
     )
-    $uri = "$CudaAPIbaseurl`beta/accounts/ess"
+    $uri = $CudaAPIbaseurl + 'beta/accounts/ess'
     Write-host "DEBUG: $uri"
     $res = Invoke-RestMethod -Uri $uri -Headers $Headers -Method Get
     return $res.results[0].accountId
