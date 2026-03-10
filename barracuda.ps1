@@ -91,7 +91,6 @@ if ($DBGdomain) {
     do {
         $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains$uriparam"
         Write-Host -NoNewline " #"
-        Write-Host " DEBUG: $uri"
         try {
             $res = Invoke-RestMethod -Uri $uri -Headers $CommonHeaders -Method Get
             $thispage = [int]$res.pageNum
