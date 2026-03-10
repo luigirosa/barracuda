@@ -89,7 +89,7 @@ if ($DBGdomain) {
     $loopflag = $true
     $uriparam = "?size=50"
     do {
-        $uri = $CudaAPIbaseurl + 'beta/accounts/$accountID/ess/domains$uriparam'
+        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains$uriparam"
         Write-Host -NoNewline " #"
         Write-Host " DEBUG: $uri"
         try {
@@ -146,7 +146,7 @@ if ($DBGstats) {
         -TrustServerCertificate
     foreach ($domrecord in $dtable) {
         $domainName = $domrecord.domainName
-        $uri = $CudaAPIbaseurl + 'beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=30'
+        $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=30"
         Write-Host -NoNewline " # "
         try {
             $res = Invoke-RestMethod -Uri $uri -Headers $CommonHeaders -Method Get
