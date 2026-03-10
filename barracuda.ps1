@@ -61,7 +61,6 @@ function Get-BarracudaAccountID {
         [hashtable]$Headers
     )
     $uri = $CudaAPIbaseurl + 'beta/accounts/ess'
-    Write-host "DEBUG: $uri"
     $res = Invoke-RestMethod -Uri $uri -Headers $Headers -Method Get
     return $res.results[0].accountId
 }
@@ -90,7 +89,7 @@ if ($DBGdomain) {
     $loopflag = $true
     $uriparam = "?size=50"
     do {
-        $uri = "$CudaAPIbaseurl`beta/accounts/$accountID/ess/domains$uriparam"
+        $uri = $CudaAPIbaseurl + 'beta/accounts/$accountID/ess/domains$uriparam'
         Write-Host -NoNewline " #"
         try {
             $res = Invoke-RestMethod -Uri $uri -Headers $CommonHeaders -Method Get
@@ -146,7 +145,7 @@ if ($DBGstats) {
         -TrustServerCertificate
     foreach ($domrecord in $dtable) {
         $domainName = $domrecord.domainName
-        $uri = "$CudaAPIbaseurl`beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=30"
+        $uri = $CudaAPIbaseurl + 'beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=30'
         Write-Host -NoNewline " # "
         try {
             $res = Invoke-RestMethod -Uri $uri -Headers $CommonHeaders -Method Get
