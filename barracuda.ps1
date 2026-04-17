@@ -6,7 +6,7 @@
 # https://campus.barracuda.com/product/emailgatewaydefense/doc/167976859/api-overview
 #
 
-$ScriptVersion = "1.20"
+$ScriptVersion = "1.30"
 
 
 if ($PSVersionTable.PSVersion.Major -lt 7) {
@@ -19,6 +19,14 @@ try {
     . "$PSScriptRoot\barracudaconfig.ps1" 
 } catch {
     Write-Host "Error reading config file."
+    exit
+}
+
+Write-Host "Reading functions."
+try {
+    . "$PSScriptRoot\functionsv7.ps1" 
+} catch {
+    Write-Host "Error reading functions file."
     exit
 }
 
@@ -79,18 +87,11 @@ if ($DBGdomain) {
     Write-Host -NoNewline "Domains: "
     # delete old records
     Write-Host -NoNewline "cleanup "
-    Invoke-Sqlcmd `
-        -Query "TRUNCATE TABLE $SQLtabledomain" `
-        -ServerInstance $SQLserver `
-        -Database $SQLdatabase `
-        -Username $SQLu `
-        -Password $SQLp `
-        -TrustServerCertificate
+    Invoke-Sqlcmd -Query "TRUNCATE TABLE $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
     $loopflag = $true
     $uriparam = "?size=50"
     do {
         $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains$uriparam"
-        Write-Host -NoNewline " #"
         try {
             $res = Invoke-RestMethod -Uri $uri -Headers $CommonHeaders -Method Get
             $thispage = [int]$res.pageNum
@@ -125,7 +126,6 @@ if ($DBGdomain) {
         }
     }
     while ($loopflag)
-
     Write-Host " done."
 }
 
