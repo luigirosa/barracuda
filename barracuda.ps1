@@ -138,17 +138,10 @@ if ($DBGdomain) {
 if ($DBGstats) {
     Write-Host -NoNewline "Email stats: "
     # enumerate domains
-    $dtable = Invoke-Sqlcmd `
-        -Query "SELECT * FROM $SQLtabledomain" `
-        -ServerInstance $SQLserver `
-        -Database $SQLdatabase `
-        -Username $SQLu `
-        -Password $SQLp `
-        -TrustServerCertificate
+    $dtable = Invoke-Sqlcmd -Query "SELECT * FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
     foreach ($domrecord in $dtable) {
         $domainName = $domrecord.domainName
         $uri = $CudaAPIbaseurl + "beta/accounts/$accountID/ess/domains/$domainName/statistics?type=email&period=daily&count=30"
-        Write-Host -NoNewline " # "
         try {
             $res = Invoke-RestMethod -Uri $uri -Headers $CommonHeaders -Method Get
             Write-Host -NoNewline $domainName
