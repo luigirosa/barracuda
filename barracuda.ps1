@@ -84,6 +84,7 @@ $accountID = Get-BarracudaAccountID -Headers $CommonHeaders
 # Domains
 #
 if ($DBGdomain) {
+	$trkID = Begin-Tracking $SQLTrackingTable 'barracuda.ps1' "$SQLdatabase.$SQLtabledomain"
     Write-Host -NoNewline "Domains: "
     # delete old records
     Write-Host -NoNewline "cleanup "
@@ -127,6 +128,7 @@ if ($DBGdomain) {
     }
     while ($loopflag)
     Write-Host " done."
+	End-Tracking $SQLTrackingTable $trkID "$SQLdatabase.$SQLtabledomain"
 }
 
 
