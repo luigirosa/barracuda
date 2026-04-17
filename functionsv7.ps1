@@ -35,8 +35,8 @@ function Begin-Tracking {
   $Comm = New-Object $sqlCommandType
   $Comm.Connection = $Connection
   $Comm.CommandText = $q
-  [void]$Comm.Parameters.AddWithValue("@script", $rec.Script)
-  [void]$Comm.Parameters.AddWithValue("@tablename", $rec.Table)
+  [void]$Comm.Parameters.AddWithValue("@script", $Script)
+  [void]$Comm.Parameters.AddWithValue("@tablename", $Table)
   $NewId = $Comm.ExecuteScalar()
   $Comm.Dispose()
 <#
