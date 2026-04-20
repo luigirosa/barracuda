@@ -136,6 +136,7 @@ if ($DBGdomain) {
 # Statistics
 #
 if ($DBGstats) {
+	$trkID = Begin-Tracking $SQLTrackingTable 'barracuda.ps1' "$SQLdatabase.$SQLtablestats"
     Write-Host -NoNewline "Email stats: "
     # enumerate domains
     $dtable = Invoke-Sqlcmd -Query "SELECT * FROM $SQLtabledomain" -ServerInstance $SQLserver -Database $SQLdatabase -Username $SQLu -Password $SQLp -TrustServerCertificate
@@ -203,6 +204,7 @@ if ($DBGstats) {
         }
     }
     Write-Host " done."
+	End-Tracking $SQLTrackingTable $trkID "$SQLdatabase.$SQLtablestats"
 }
 
 # Clean up
